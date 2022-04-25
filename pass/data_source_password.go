@@ -2,8 +2,10 @@ package pass
 
 import (
 	"context"
+	"fmt"
 	"log"
 
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/pkg/errors"
@@ -53,9 +55,9 @@ func passwordDataSourceRead(ctx context.Context, d *schema.ResourceData, meta in
 	pp.mutex.Lock()
 	defer pp.mutex.Unlock()
 	st := pp.store
-	log.Printf("[DEBUG] Reading %s from Pass", path)
+	tflog.Debug(ctx, fmt.Sprintf("Reading %s from Pass", path))
 
-	sec, err := st.Get(context.Background(), path)
+	sec, err := st.Get(ctx, path)
 	if err != nil {
 		return diag.FromErr(errors.Wrapf(err, "failed to read password at %s", path))
 	}

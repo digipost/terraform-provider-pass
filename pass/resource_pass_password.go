@@ -3,8 +3,8 @@ package pass
 import (
 	"context"
 	"fmt"
-	"log"
 
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"gopkg.in/yaml.v2"
 
@@ -85,7 +85,7 @@ func passPasswordResourceDelete(ctx context.Context, d *schema.ResourceData, met
 	pp.mutex.Lock()
 	defer pp.mutex.Unlock()
 	st := pp.store
-	log.Printf("[DEBUG] Deleting generic Vault from %s", path)
+	tflog.Debug(ctx, fmt.Sprintf("Deleting from store: %s", "path"))
 	err := st.Delete(ctx, path)
 	if err != nil {
 		return diag.FromErr(errors.Wrapf(err, "failed to delete password at %s", path))
