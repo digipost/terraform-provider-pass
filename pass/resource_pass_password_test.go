@@ -4,28 +4,27 @@ import (
 	"fmt"
 	"testing"
 
-	r "github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	r "github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 )
 
 func TestResourcePassword(t *testing.T) {
 	r.Test(t, r.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t) },
+		ProviderFactories: testProviderFactory,
 		Steps: []r.TestStep{
 			{
-				Config: testResourcePassword_initialConfig,
-				Check:  testResourcePassword_initialCheck,
+				Config: testResourcePasswordInitialConfig,
+				Check:  testResourcePasswordInitialCheck,
 			},
 			{
-				Config: testResourcePassword_updateConfig,
-				Check:  testResourcePassword_updateCheck,
+				Config: testResourcePasswordUpdateConfig,
+				Check:  testResourcePasswordUpdateCheck,
 			},
 		},
 	})
 }
 
-var testResourcePassword_initialConfig = `
+var testResourcePasswordInitialConfig = `
 
 resource "pass_password" "test" {
     path = "secret/foo"
@@ -37,7 +36,7 @@ resource "pass_password" "test" {
 
 `
 
-func testResourcePassword_initialCheck(s *terraform.State) error {
+func testResourcePasswordInitialCheck(s *terraform.State) error {
 	resourceState := s.Modules[0].Resources["pass_password.test"]
 	if resourceState == nil {
 		return fmt.Errorf("resource not found in state")
@@ -68,7 +67,7 @@ func testResourcePassword_initialCheck(s *terraform.State) error {
 	return nil
 }
 
-var testResourcePassword_updateConfig = `
+var testResourcePasswordUpdateConfig = `
 
 resource "pass_password" "test" {
     path = "secret/foo"
@@ -80,6 +79,20 @@ resource "pass_password" "test" {
 
 `
 
-func testResourcePassword_updateCheck(s *terraform.State) error {
+func testResourcePasswordUpdateCheck(s *terraform.State) error {
+	resourceState := s.Modules[0].Resources["pass_password.test"]
+	if resourceState == nil {
+		return fmt.Errorf("resource not found in state")
+	}
+
+	instanceState := resourceState.Primary
+	if instanceState == nil {
+		return fmt.Errorf("resource has no primary instance")
+	}
+
+	if got, want := instanceState.Attributes["data.zip"], "zoop"; got != want {
+		return fmt.Errorf("data on test instance contains %s; want %s", got, want)
+	}
+
 	return nil
 }

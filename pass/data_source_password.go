@@ -4,14 +4,14 @@ import (
 	"context"
 	"log"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/pkg/errors"
 )
 
 func passwordDataSource() *schema.Resource {
 	return &schema.Resource{
-		Read: passwordDataSourceRead,
-
+		ReadContext: passwordDataSourceRead,
 		Schema: map[string]*schema.Schema{
 			"path": {
 				Type:        schema.TypeString,
@@ -46,10 +46,10 @@ func passwordDataSource() *schema.Resource {
 	}
 }
 
-func passwordDataSourceRead(d *schema.ResourceData, meta interface{}) error {
+func passwordDataSourceRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	path := d.Get("path").(string)
 
-	pp := meta.(*PassProvider)
+	pp := meta.(*passProvider)
 	pp.mutex.Lock()
 	defer pp.mutex.Unlock()
 	st := pp.store
@@ -57,26 +57,26 @@ func passwordDataSourceRead(d *schema.ResourceData, meta interface{}) error {
 
 	sec, err := st.Get(context.Background(), path)
 	if err != nil {
-		return errors.Wrapf(err, "failed to read password at %s", path)
+		return diag.FromErr(errors.Wrapf(err, "failed to read password at %s", path))
 	}
 
 	d.SetId(path)
 
 	if err := d.Set("password", sec.Password()); err != nil {
 		log.Printf("[ERROR] Error when setting password: %v", err)
-		return err
+		return diag.FromErr(err)
 	}
 	if err := d.Set("data", sec.Data()); err != nil {
 		log.Printf("[ERROR] Error when setting data: %v", err)
-		return err
+		return diag.FromErr(err)
 	}
 	if err := d.Set("body", sec.Body()); err != nil {
 		log.Printf("[ERROR] Error when setting body: %v", err)
-		return err
+		return diag.FromErr(err)
 	}
 	if err := d.Set("full", sec.String()); err != nil {
 		log.Printf("[ERROR] Error when setting full: %v", err)
-		return err
+		return diag.FromErr(err)
 	}
 
 	return nil
