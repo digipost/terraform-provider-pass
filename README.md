@@ -1,9 +1,7 @@
 Pass Terraform Provider
 =======================
 
-[![Go Report Card](https://goreportcard.com/badge/github.com/camptocamp/terraform-provider-pass)](https://goreportcard.com/report/github.com/camptocamp/terraform-provider-pass)
-[![Build Status](https://travis-ci.org/camptocamp/terraform-provider-pass.svg?branch=master)](https://travis-ci.org/camptocamp/terraform-provider-pass)
-[![By Camptocamp](https://img.shields.io/badge/by-camptocamp-fb7047.svg)](http://www.camptocamp.com)
+> This provider was forked from the now-defunct [camptocamp/terraform-provider-pass](https://github.com/camptocamp/terraform-provider-pass) and took some inspirational patches from [another fork](https://github.com/mecodia/terraform-provider-pass) which is based on the 2.x releases.
 
 This provider adds integration between Terraform and [Pass][] and [Gopass][] password stores.
 
@@ -13,8 +11,8 @@ This provider adds integration between Terraform and [Pass][] and [Gopass][] pas
 Requirements
 ------------
 
--	[Terraform](https://www.terraform.io/downloads.html) 0.10.x
--	[Go](https://golang.org/doc/install) 1.10 and [dep](https://golang.github.io/dep/) (to build the provider plugin)
+-	[Terraform](https://www.terraform.io/downloads.html) 0.12.x
+-	[Go](https://golang.org/doc/install) 1.18
 
 Building The Provider
 ---------------------
@@ -22,21 +20,20 @@ Building The Provider
 Download the provider source code
 
 ```sh
-$ go get github.com/camptocamp/terraform-provider-pass
+$ git clone https://github.com/digipost/terraform-provider-pass.git
 ```
 
 Enter the provider directory and build the provider
 
 ```sh
-$ cd $GOPATH/src/github.com/camptocamp/terraform-provider-pass
-$ dep ensure
-$ make build
+$ cd terraform-provider-pass
+$ make
 ```
 
 Installing the provider
 -----------------------
 
-After building the provider, install it using the Terraform instructions for [installing a third party provider](https://www.terraform.io/docs/configuration/providers.html#third-party-plugins).
+After building the provider, install it using the Terraform instructions for [installing a third party provider](https://www.terraform.io/docs/configuration/providers.html#third-party-plugins) or [in-house providers](https://www.terraform.io/language/providers/requirements#in-house-providers).
 
 Example
 ----------------------
@@ -101,34 +98,6 @@ The following attributes are exported:
 - `data` - Additional secret data
 - `body` - Raw secret data if not YAML
 - `full` - Entire secret contents
-
-Developing the Provider
----------------------------
-
-If you wish to work on the provider, you'll first need [Go](http://www.golang.org) installed on your machine (version 1.8+ is *required*). You'll also need to correctly setup a [GOPATH](http://golang.org/doc/code.html#GOPATH), as well as adding `$GOPATH/bin` to your `$PATH`.
-
-To compile the provider, run `make build`. This will build the provider and put the provider binary in the `$GOPATH/bin` directory.
-
-```sh
-$ make bin
-...
-$ $GOPATH/bin/terraform-provider-$PROVIDER_NAME
-...
-```
-
-In order to test the provider, you can simply run `make test`.
-
-```sh
-$ make test
-```
-
-In order to run the full suite of Acceptance tests, run `make testacc`.
-
-*Note:* Acceptance tests create real resources, and often cost money to run.
-
-```sh
-$ make testacc
-```
 
 
 [Pass]: https://www.passwordstore.org/

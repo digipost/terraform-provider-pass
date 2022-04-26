@@ -1,3 +1,10 @@
+## 1.5.0 (April 26, 2022)
+
+ENHANCEMENTS:
+* Build with Go 1.18
+* Use Terraform SDK v2
+* Support ARM-based Macs
+
 ## 1.4.0 (Aug 19, 2020)
 
 ENHANCEMENTS:

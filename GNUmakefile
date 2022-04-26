@@ -5,31 +5,10 @@ PKG_NAME=pass
 BINARY=terraform-provider-pass
 VERSION = "$(shell git describe --always)"
 
-default: build-all
+default: build-local
 
-build-all: linux windows darwin
-
-linux: fmtcheck
-	@mkdir -p bin/
-	GOOS=linux GOARCH=amd64 go build -v -o bin/$(BINARY)_$(VERSION)_linux_amd64
-	GOOS=linux GOARCH=arm64 go build -v -o bin/$(BINARY)_$(VERSION)_linux_arm64
-	GOOS=linux GOARCH=386 go build -v -o bin/$(BINARY)_$(VERSION)_linux_x86
-
-windows: fmtcheck
-	@mkdir -p bin/
-	GOOS=windows GOARCH=amd64 go build -v -o bin/$(BINARY)_$(VERSION)_windows_amd64
-	GOOS=windows GOARCH=386 go build -v -o bin/$(BINARY)_$(VERSION)_windows_x86
-
-darwin: fmtcheck
-	@mkdir -p bin/
-	GOOS=darwin GOARCH=amd64 go build -v -o bin/$(BINARY)_$(VERSION)_darwin_amd64
-	GOOS=darwin GOARCH=arm64 go build -v -o bin/$(BINARY)_$(VERSION)_darwin_arm64
-
-release: clean linux windows darwin
-	for f in $(shell ls bin/); do zip bin/$${f}.zip bin/$${f}; done
-
-clean:
-	git clean -fXd -e \!vendor -e \!vendor/**/*
+build-local:
+	goreleaser release --rm-dist --snapshot --skip-publish  --skip-sign
 
 test: fmtcheck
 	go test $(TEST) -timeout=30s -parallel=4
