@@ -13,6 +13,7 @@ Requirements
 
 -	[Terraform](https://www.terraform.io/downloads.html) 0.12.x
 -	[Go](https://golang.org/doc/install) 1.18
+- [goreleaser](https://goreleaser.com/) >= 2.5.1
 
 Building The Provider
 ---------------------
@@ -29,6 +30,59 @@ Enter the provider directory and build the provider
 $ cd terraform-provider-pass
 $ make
 ```
+
+Testing the binary locally
+--------------------------
+
+1. Set up a developer override in Terraform for the provider, as described in https://developer.hashicorp.com/terraform/cli/config/config-file#development-overrides-for-provider-developers
+This amounts to creating or updating a `~/.terraformrc` file with contents of:
+```
+provider_installation {
+
+  dev_overrides {
+      "github.com/digipost/pass" = "${GOPATH}/bin"
+  }
+
+  # For all other providers, install them directly from their origin provider
+  # registries as normal. If you omit this, Terraform will _only_ use
+  # the dev_overrides block, and so no other providers will be available.
+  direct {}
+}
+```
+You must substitute `${GOPATH}` with the actual value of your shell environment variable, `GOPATH`, as 
+environment variable substitution in that file, does not work.
+
+2. Install the binary of the provider locally: `go install .`
+   This places a copy of the binary in the folder configured above. 
+
+3. Create a new folder to hold a new minimal Terraform configuration, a `main.tf` file with contents like:
+```
+terraform {
+  required_providers {
+    pass = {
+      source = "github.com/digipost/pass"
+    }
+  }
+}
+
+provider "pass" {
+  store_dir = "<YOUR pass store directory, e.g. ~/.password-store>"
+  refresh_store = false
+}
+
+
+data "pass_password" "test" {
+  path = "<some secret path in the password store, /foo/bar/username >"
+}
+
+output "testdata" {
+  value = data.pass_password.test
+
+```
+
+4. Change into the directory and execute `terraform plan`, `terraform apply` etc.
+This should produce no errors.
+
 
 Installing the provider
 -----------------------
