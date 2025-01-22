@@ -8,7 +8,7 @@ VERSION = "$(shell git describe --always)"
 default: build-local
 
 build-local:
-	goreleaser release --rm-dist --snapshot --skip-publish  --skip-sign
+	goreleaser release --clean --snapshot --skip=publish  --skip=sign
 
 test: fmtcheck
 	go test $(TEST) -timeout=30s -parallel=4
