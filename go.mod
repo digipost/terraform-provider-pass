@@ -1,6 +1,7 @@
 module github.com/digipost/terraform-provider-pass
 
-go 1.21
+go 1.23.0
+
 toolchain go1.24.1
 
 require (
@@ -28,7 +29,7 @@ require (
 	github.com/bgentry/speakeasy v0.1.0 // indirect
 	github.com/bmatcuk/doublestar/v4 v4.8.1 // indirect
 	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
-	github.com/cloudflare/circl v1.3.7 // indirect
+	github.com/cloudflare/circl v1.6.1 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.0 // indirect
 	github.com/dominikschulz/github-releases v0.0.2 // indirect
 	github.com/doronbehar/gocui v0.4.2 // indirect
