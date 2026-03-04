@@ -1,0 +1,18 @@
+{
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+  "features": {
+    "ghcr.io/devcontainers/features/go:1": {
+      "version": "latest"
+    },
+    "ghcr.io/devcontainers/features/terraform:1": {
+      "installTerraformDocs": true,
+      "version": "latest",
+      "tflint": "latest",
+      "terragrunt": "latest"
+    },
+    "ghcr.io/guiyomh/features/goreleaser:0": {
+      "version": "latest"
+    }
+    
+  }
+}
