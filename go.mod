@@ -1,6 +1,6 @@
 module github.com/digipost/terraform-provider-pass
 
-go 1.25.0
+go 1.26.1
 
 require (
 	github.com/blang/semver v3.5.1+incompatible

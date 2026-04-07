@@ -40,7 +40,7 @@ This amounts to creating or updating a `~/.terraformrc` file with contents of:
 provider_installation {
 
   dev_overrides {
-      "github.com/digipost/pass" = "${GOPATH}/bin"
+      "digipost/pass" = "${GOPATH}/bin"
   }
 
   # For all other providers, install them directly from their origin provider
@@ -60,23 +60,28 @@ environment variable substitution in that file, does not work.
 terraform {
   required_providers {
     pass = {
-      source = "github.com/digipost/pass"
+      source  = "digipost/pass"
     }
   }
 }
-
 provider "pass" {
-  store_dir = "<YOUR pass store directory, e.g. ~/.password-store>"
+  store_dir = "./test"
   refresh_store = false
 }
 
+resource "pass_password" "test" {
+  path = "/foo/bar/username"
+  password = "mysecretpassword"
+}
 
 data "pass_password" "test" {
-  path = "<some secret path in the password store, /foo/bar/username >"
+  path = "/foo/bar/username"
+  depends_on = [ pass_password.test ]
 }
 
 output "testdata" {
   value = data.pass_password.test
+}
 
 ```
 
