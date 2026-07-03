@@ -124,9 +124,11 @@ easy to miss since some 1.x setups didn't require it.
   **Before upgrading**, if you're about to add `pass_password` resources for
   secrets that already exist in the store outside terraform, import them
   first:
+
   ```sh
   terraform import pass_password.example some/existing/path
   ```
+  
 - **A secret deleted from the store outside terraform is handled
   gracefully.** Reading it clears it from state (terraform plans a
   recreation) instead of failing, and destroying an already-deleted secret
