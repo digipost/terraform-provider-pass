@@ -3,7 +3,6 @@ package pass
 import (
 	"context"
 	"fmt"
-	"log"
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -24,24 +23,28 @@ func passwordDataSource() *schema.Resource {
 			"password": {
 				Type:        schema.TypeString,
 				Computed:    true,
+				Sensitive:   true,
 				Description: "secret password.",
 			},
 
 			"data": {
 				Type:        schema.TypeMap,
 				Computed:    true,
+				Sensitive:   true,
 				Description: "additional secret data.",
 			},
 
 			"body": {
 				Type:        schema.TypeString,
 				Computed:    true,
+				Sensitive:   true,
 				Description: "raw secret data if not YAML.",
 			},
 
 			"full": {
 				Type:        schema.TypeString,
 				Computed:    true,
+				Sensitive:   true,
 				Description: "entire secret contents",
 			},
 		},
@@ -50,34 +53,28 @@ func passwordDataSource() *schema.Resource {
 
 func passwordDataSourceRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	path := d.Get("path").(string)
-
 	pp := meta.(*passProvider)
-	pp.mutex.Lock()
-	defer pp.mutex.Unlock()
-	st := pp.store
+
 	tflog.Debug(ctx, fmt.Sprintf("Reading %s from Pass", path))
 
-	sec, err := st.Get(ctx, path)
+	sec, err := pp.getSecret(ctx, path)
 	if err != nil {
 		return diag.FromErr(errors.Wrapf(err, "failed to read password at %s", path))
 	}
 
 	d.SetId(path)
 
-	if err := d.Set("password", sec.Password()); err != nil {
-		log.Printf("[ERROR] Error when setting password: %v", err)
+	parsed := parseSecretBytes(sec.Bytes())
+	if err := d.Set("password", parsed.password); err != nil {
 		return diag.FromErr(err)
 	}
-	if err := d.Set("data", sec.Data()); err != nil {
-		log.Printf("[ERROR] Error when setting data: %v", err)
+	if err := d.Set("data", parsed.data); err != nil {
 		return diag.FromErr(err)
 	}
-	if err := d.Set("body", sec.Body()); err != nil {
-		log.Printf("[ERROR] Error when setting body: %v", err)
+	if err := d.Set("body", parsed.body); err != nil {
 		return diag.FromErr(err)
 	}
-	if err := d.Set("full", sec.String()); err != nil {
-		log.Printf("[ERROR] Error when setting full: %v", err)
+	if err := d.Set("full", parsed.full); err != nil {
 		return diag.FromErr(err)
 	}
 
