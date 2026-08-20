@@ -324,8 +324,8 @@ func (s *gitStore) withRead(ctx context.Context, fn func() error) error {
 
 	if s.fl != nil {
 		ok, err := s.fl.TryRLockContext(ctx, flockRetryDelay)
-		if err != nil || !ok {
-			return errors.Wrapf(err, "cannot lock password store checkout %s", s.dir)
+		if lerr := lockErr(ok, err, s.dir); lerr != nil {
+			return lerr
 		}
 		defer s.unlock()
 	}
@@ -344,8 +344,8 @@ func (s *gitStore) withWrite(ctx context.Context, commitMsg string, mutate func(
 
 	if s.fl != nil {
 		ok, err := s.fl.TryLockContext(ctx, flockRetryDelay)
-		if err != nil || !ok {
-			return errors.Wrapf(err, "cannot lock password store checkout %s", s.dir)
+		if lerr := lockErr(ok, err, s.dir); lerr != nil {
+			return lerr
 		}
 		defer s.unlock()
 	}
@@ -491,11 +491,23 @@ func (s *gitStore) lock(ctx context.Context) error {
 		return nil
 	}
 	ok, err := s.fl.TryLockContext(ctx, flockRetryDelay)
-	if err != nil || !ok {
-		return errors.Wrapf(err, "cannot lock password store checkout %s", s.dir)
+
+	return lockErr(ok, err, s.dir)
+}
+
+// lockErr normalizes a failed flock attempt into a non-nil error: flock can
+// report (false, nil), and wrapping that nil error would let callers skip
+// the locked section while reporting success — writes would claim to have
+// synced and reads would return a nil secret.
+func lockErr(ok bool, err error, dir string) error {
+	if err == nil && ok {
+		return nil
+	}
+	if err == nil {
+		return errors.Errorf("cannot lock password store checkout %s", dir)
 	}
 
-	return nil
+	return errors.Wrapf(err, "cannot lock password store checkout %s", dir)
 }
 
 func (s *gitStore) unlock() {
