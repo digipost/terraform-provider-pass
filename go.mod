@@ -6,7 +6,7 @@ require (
 	github.com/gofrs/flock v0.13.0
 	github.com/gopasspw/gopass v1.16.1
 	github.com/hashicorp/terraform-plugin-docs v0.25.0
-	github.com/hashicorp/terraform-plugin-log v0.10.0
+	github.com/hashicorp/terraform-plugin-log v0.11.0
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.40.1
 	github.com/pkg/errors v0.9.1
 	gopkg.in/yaml.v2 v2.4.0
