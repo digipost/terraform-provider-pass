@@ -311,6 +311,40 @@ func TestProviderEndToEnd(t *testing.T) {
 			t.Errorf("an unexpected commit was pushed: %q", got)
 		}
 	})
+
+	t.Run("reading a freshly imported secret populates path, password and data", func(t *testing.T) {
+		isolateGopass(t)
+		remoteURL, other := setupPlainStoreRemote(t)
+
+		// A secret that pre-dates any terraform state, exactly like the
+		// scenario `terraform import` exists for.
+		writeFile(t, other, "shared/imported.txt", "s3cr3t\n---\nzip: zap\n")
+		mustGit(t, other, "add", "--all")
+		mustGit(t, other, "commit", "--quiet", "-m", "written before import")
+		mustGit(t, other, "push", "--quiet", "origin", "main")
+
+		pp, err := configureProvider(t, map[string]interface{}{"repo_url": remoteURL})
+		if err != nil {
+			t.Fatalf("configure: %v", err)
+		}
+
+		// ImportStatePassthroughContext hands Read a ResourceData with
+		// only the ID set; nothing else is populated ahead of Read.
+		rd := resourceData(t, map[string]interface{}{})
+		rd.SetId("shared/imported")
+		if diags := passPasswordResourceRead(ctx, rd, pp); diags.HasError() {
+			t.Fatalf("read: %v", diags)
+		}
+		if got := rd.Get("path").(string); got != "shared/imported" {
+			t.Errorf("path = %q; want shared/imported (path is Required+ForceNew, so import leaves a forced replace unless Read sets it)", got)
+		}
+		if got := rd.Get("password").(string); got != "s3cr3t" {
+			t.Errorf("password = %q", got)
+		}
+		if got := rd.Get("data").(map[string]interface{})["zip"]; got != "zap" {
+			t.Errorf("data.zip = %v", got)
+		}
+	})
 }
 
 func TestProviderConfigure(t *testing.T) {

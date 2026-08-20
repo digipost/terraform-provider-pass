@@ -42,6 +42,9 @@ FEATURES:
   terraform state (e.g. written by another team or the `pass`/`gopass` CLI).
   The error names the `terraform import` command to adopt it instead. See
   `docs/adr/0002-create-refuses-to-overwrite-untracked-secrets.md`.
+* `pass_password` now supports `terraform import`, so a secret the
+  create-refusal check above points at (or any other pre-existing secret)
+  can be adopted into state: `terraform import pass_password.example <path>`.
 
 ENHANCEMENTS:
 

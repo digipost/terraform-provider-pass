@@ -16,6 +16,9 @@ func passPasswordResource() *schema.Resource {
 		UpdateContext: passPasswordResourceWrite,
 		DeleteContext: passPasswordResourceDelete,
 		ReadContext:   passPasswordResourceRead,
+		Importer: &schema.ResourceImporter{
+			StateContext: schema.ImportStatePassthroughContext,
+		},
 
 		Schema: map[string]*schema.Schema{
 			"path": {
@@ -134,6 +137,9 @@ func passPasswordResourceRead(ctx context.Context, d *schema.ResourceData, meta 
 	}
 
 	parsed := parseSecretBytes(sec.Bytes())
+	if err := d.Set("path", path); err != nil {
+		return diag.FromErr(err)
+	}
 	if err := d.Set("password", parsed.password); err != nil {
 		return diag.FromErr(err)
 	}

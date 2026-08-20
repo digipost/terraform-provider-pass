@@ -20,6 +20,11 @@ func TestResourcePassword(t *testing.T) {
 				Config: testResourcePasswordUpdateConfig,
 				Check:  testResourcePasswordUpdateCheck,
 			},
+			{
+				ResourceName:      "pass_password.test",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
 		},
 	})
 }
