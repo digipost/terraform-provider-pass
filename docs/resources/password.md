@@ -58,8 +58,24 @@ resource "pass_password" "db" {
 
 ## Import
 
-Import is supported using the following syntax:
+An existing secret can be adopted with `terraform import`. Add a
+`pass_password` resource block whose `path` is exactly the secret's store
+path, then import using that same path as the ID — extension-less and
+relative to the store root, as `pass ls` shows it (not the `.gpg` filename):
 
 ```shell
-terraform import pass_password.example Utvikling/Azure/db_password
+terraform import pass_password.db Utvikling/Azure/db_password
 ```
+
+Import refuses secrets this resource cannot represent without losing
+content: free-form text after the password line, CRLF line endings, and
+YAML data with nested, floating-point, boolean or empty values (see
+[ADR 0003](https://github.com/digipost/terraform-provider-pass/blob/main/docs/adr/0003-import-refuses-unrepresentable-secrets.md)).
+Adopted secrets may still have their YAML formatting normalized (key
+order, quoting) by the first write after import.
+
+After importing, run `terraform plan` and copy the secret's real
+`password` and `data` values into the configuration before applying:
+both attributes are sensitive, so a plan against stale config values
+shows only `(sensitive value)` while the apply silently overwrites the
+store content.
