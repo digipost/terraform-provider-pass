@@ -121,9 +121,10 @@ easy to miss since some 1.x setups didn't require it.
   already created directly in the store, `terraform apply` errors and names
   the `terraform import` command to adopt it instead. See
   [ADR 0002](https://github.com/digipost/terraform-provider-pass/blob/main/docs/adr/0002-create-refuses-to-overwrite-untracked-secrets.md).
-  **Before upgrading**, if you're about to add `pass_password` resources for
-  secrets that already exist in the store outside terraform, import them
-  first:
+  **After upgrading** (import support is new in 2.0 — running this on 1.x
+  fails with "resource doesn't support import"), if you're about to add
+  `pass_password` resources for secrets that already exist in the store
+  outside terraform, import them before applying:
 
   ```sh
   terraform import pass_password.example some/existing/path
@@ -150,6 +151,7 @@ easy to miss since some 1.x setups didn't require it.
 6. If you're about to add new `pass_password` resources for secrets that
    already exist in the store (created by a human or another tool), import
    them first instead of letting `terraform apply` try to create them.
+   Do this after the provider upgrade — 1.x cannot import.
 7. Run `terraform plan` and review carefully before `apply` — the plan
    should show no unexpected changes to existing resources; the on-disk
    secret format is unchanged and byte-compatible with what 1.x (and the
@@ -161,5 +163,6 @@ If a run fails during migration, the error messages are written to name the
 exact next step (e.g. which command to run, which attribute to change). If
 something is still unclear, check the referenced ADRs
 ([0001](https://github.com/digipost/terraform-provider-pass/blob/main/docs/adr/0001-provider-owns-git-gopass-only-encrypts.md),
-[0002](https://github.com/digipost/terraform-provider-pass/blob/main/docs/adr/0002-create-refuses-to-overwrite-untracked-secrets.md))
+[0002](https://github.com/digipost/terraform-provider-pass/blob/main/docs/adr/0002-create-refuses-to-overwrite-untracked-secrets.md),
+[0003](https://github.com/digipost/terraform-provider-pass/blob/main/docs/adr/0003-import-refuses-unrepresentable-secrets.md))
 or open an issue.

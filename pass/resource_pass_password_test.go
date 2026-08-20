@@ -20,6 +20,17 @@ func TestResourcePassword(t *testing.T) {
 				Config: testResourcePasswordUpdateConfig,
 				Check:  testResourcePasswordUpdateCheck,
 			},
+			{
+				ResourceName:      "pass_password.test",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				// The imported state must plan clean against the same
+				// config, or import would leave a spurious diff.
+				Config:   testResourcePasswordUpdateConfig,
+				PlanOnly: true,
+			},
 		},
 	})
 }

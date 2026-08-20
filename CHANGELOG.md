@@ -42,6 +42,16 @@ FEATURES:
   terraform state (e.g. written by another team or the `pass`/`gopass` CLI).
   The error names the `terraform import` command to adopt it instead. See
   `docs/adr/0002-create-refuses-to-overwrite-untracked-secrets.md`.
+* `pass_password` now supports `terraform import`, so a secret the
+  create-refusal check above points at (or any other pre-existing secret)
+  can be adopted into state: `terraform import pass_password.example <path>`.
+  Import validates that the ID is the canonical extension-less store path
+  and that the secret's content is representable by the resource (a password
+  line plus optional flat YAML string data); anything else — free-form body
+  text, CRLF line endings, nested or typed YAML values, a `.gpg`-suffixed or
+  slash-decorated ID — is refused with an actionable error instead of letting
+  the next apply silently rewrite the shared store. See
+  `docs/adr/0003-import-refuses-unrepresentable-secrets.md`.
 
 ENHANCEMENTS:
 

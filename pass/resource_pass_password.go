@@ -3,6 +3,7 @@ package pass
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -16,6 +17,9 @@ func passPasswordResource() *schema.Resource {
 		UpdateContext: passPasswordResourceWrite,
 		DeleteContext: passPasswordResourceDelete,
 		ReadContext:   passPasswordResourceRead,
+		Importer: &schema.ResourceImporter{
+			StateContext: passPasswordResourceImport,
+		},
 
 		Schema: map[string]*schema.Schema{
 			"path": {
@@ -40,6 +44,64 @@ func passPasswordResource() *schema.Resource {
 			},
 		},
 	}
+}
+
+// passPasswordResourceImport guards `terraform import` against the two ways
+// a passthrough import silently destroys shared-store content (see
+// docs/adr/0003-import-refuses-unrepresentable-secrets.md): a non-canonical
+// import ID (gopass normalizes it on read, so the mismatched ForceNew path
+// forces a destructive replace on the next apply), and a secret whose
+// content the resource schema cannot carry (the next write would truncate
+// or corrupt it).
+func passPasswordResourceImport(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+	path := d.Id()
+	pp := meta.(*passProvider)
+
+	if canonical := canonicalStorePath(path); canonical != path {
+		if canonical == "" {
+			return nil, fmt.Errorf("cannot import %q: the import ID must be the secret's store path", path)
+		}
+
+		return nil, fmt.Errorf("cannot import %q: the import ID must be the extension-less store path relative to the store root, as `pass ls` shows it — did you mean %q?", path, canonical)
+	}
+
+	sec, err := pp.getSecret(ctx, path)
+	if isNotFoundErr(err) {
+		return nil, fmt.Errorf("cannot import %s: no secret exists at that path in the password store; paths are extension-less and relative (e.g. Utvikling/Azure/db_password, not a .gpg filename) — check `pass ls`", path)
+	}
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to retrieve password at %s", path)
+	}
+
+	if err := checkSecretRepresentable(sec.Bytes()); err != nil {
+		return nil, fmt.Errorf("cannot import %s: %v; the next terraform apply would silently rewrite the secret in the shared password store — keep managing it with the pass CLI, or rewrite it into the provider's format (password line, then optional ----delimited YAML string data) first", path, err)
+	}
+
+	return []*schema.ResourceData{d}, nil
+}
+
+// canonicalStorePath strips the decorations gopass silently normalizes away
+// on read (surrounding whitespace, leading/trailing/doubled slashes, a
+// .gpg/.txt filename suffix). The importer refuses any ID that differs from
+// its canonical form instead of auto-fixing it, so the state path always
+// matches what the user typed and what the config must say.
+func canonicalStorePath(path string) string {
+	p := path
+	for {
+		q := strings.TrimSpace(p)
+		q = strings.Trim(q, "/")
+		q = strings.TrimSuffix(q, ".gpg")
+		q = strings.TrimSuffix(q, ".txt")
+		if q == p {
+			break
+		}
+		p = q
+	}
+	for strings.Contains(p, "//") {
+		p = strings.ReplaceAll(p, "//", "/")
+	}
+
+	return p
 }
 
 // passPasswordResourceCreate refuses to create a resource on top of a
@@ -134,6 +196,9 @@ func passPasswordResourceRead(ctx context.Context, d *schema.ResourceData, meta 
 	}
 
 	parsed := parseSecretBytes(sec.Bytes())
+	if err := d.Set("path", path); err != nil {
+		return diag.FromErr(err)
+	}
 	if err := d.Set("password", parsed.password); err != nil {
 		return diag.FromErr(err)
 	}

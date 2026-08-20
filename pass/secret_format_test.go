@@ -2,6 +2,7 @@ package pass
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -139,6 +140,113 @@ func TestParseSecretBytes(t *testing.T) {
 			}
 			if !reflect.DeepEqual(got.data, tt.wantData) {
 				t.Errorf("data = %#v; want %#v", got.data, tt.wantData)
+			}
+		})
+	}
+}
+
+// TestCheckSecretRepresentable pins which pre-existing secrets import may
+// adopt: anything a later write would truncate or corrupt must be refused,
+// while representation-only normalization (key order, quoting) is allowed.
+func TestCheckSecretRepresentable(t *testing.T) {
+	tests := []struct {
+		name string
+		raw  string
+		// wantErr is a substring of the expected error; empty means allowed.
+		wantErr string
+	}{
+		{name: "canonical secret with data", raw: "pw\n---\nzip: zap\n"},
+		{name: "password only", raw: "hunter2"},
+		{name: "password with trailing newline", raw: "hunter2\n"},
+		{name: "empty file", raw: ""},
+		{name: "whitespace-only body", raw: "pw\n\n \n"},
+		{name: "bare yaml marker body", raw: "pw\n---\n"},
+		{name: "integer value", raw: "pw\n---\nport: 42\n"},
+		{name: "unsorted keys are formatting only", raw: "pw\n---\nuser: alice\nhost: example.com\n"},
+		{
+			name:    "free-form body",
+			raw:     "hunter2\nRotated 2026-01-05 by ops\n",
+			wantErr: "free-form text",
+		},
+		{
+			name:    "invalid yaml after separator",
+			raw:     "pw\n---\n\t: not yaml",
+			wantErr: "not a YAML map",
+		},
+		{
+			name:    "yaml list body",
+			raw:     "pw\n---\n- a\n- b\n",
+			wantErr: "not a YAML map",
+		},
+		{
+			name:    "float value",
+			raw:     "pw\n---\nratio: 1.10\n",
+			wantErr: "ratio",
+		},
+		{
+			name:    "boolean value",
+			raw:     "pw\n---\nflag: yes\n",
+			wantErr: "flag",
+		},
+		{
+			name:    "null value",
+			raw:     "pw\n---\nempty:\n",
+			wantErr: "empty",
+		},
+		{
+			name:    "nested map value",
+			raw:     "pw\n---\nnested:\n  user: x\n",
+			wantErr: "nested",
+		},
+		{
+			name:    "list value",
+			raw:     "pw\n---\nitems:\n  - a\n",
+			wantErr: "items",
+		},
+		{
+			name:    "lossy keys listed sorted",
+			raw:     "pw\n---\nratio: 1.10\nflag: yes\nnested:\n  user: x\n",
+			wantErr: "flag, nested, ratio",
+		},
+		{
+			name:    "non-string key",
+			raw:     "pw\n---\n1: x\n",
+			wantErr: "1",
+		},
+		{
+			name:    "yaml document as first line",
+			raw:     "---\nzip: zap\n",
+			wantErr: "no password line",
+		},
+		{
+			name:    "second yaml document",
+			raw:     "pw\n---\nzip: zap\n---\nother: doc\n",
+			wantErr: "more than one document",
+		},
+		{
+			name:    "crlf line endings",
+			raw:     "pw\r\n---\r\nzip: zap\r\n",
+			wantErr: "CRLF",
+		},
+		{
+			name:    "single line with trailing carriage return",
+			raw:     "pw\r\n",
+			wantErr: "CRLF",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := checkSecretRepresentable([]byte(tt.raw))
+			if tt.wantErr == "" {
+				if err != nil {
+					t.Errorf("checkSecretRepresentable(%q) = %v; want nil", tt.raw, err)
+				}
+
+				return
+			}
+			if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
+				t.Errorf("checkSecretRepresentable(%q) = %v; want error containing %q", tt.raw, err, tt.wantErr)
 			}
 		})
 	}

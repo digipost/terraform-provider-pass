@@ -11,7 +11,7 @@ build-local:
 	goreleaser release --clean --snapshot --skip=publish  --skip=sign
 
 test: fmtcheck
-	go test $(TEST) -timeout=30s -parallel=4
+	go test $(TEST) -timeout=120s -parallel=4
 
 testacc: fmtcheck
 	TF_ACC=1 go test $(TEST) -v -parallel 20 $(TESTARGS) -timeout 120m

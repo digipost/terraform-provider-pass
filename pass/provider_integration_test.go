@@ -133,6 +133,9 @@ func TestProviderEndToEnd(t *testing.T) {
 		if diags := passPasswordResourceRead(ctx, rd, pp); diags.HasError() {
 			t.Fatalf("read: %v", diags)
 		}
+		if got := rd.Get("path").(string); got != "secret/foo" {
+			t.Errorf("read path = %q; want secret/foo", got)
+		}
 		if got := rd.Get("password").(string); got != "0123456789" {
 			t.Errorf("read password = %q", got)
 		}
@@ -308,6 +311,91 @@ func TestProviderEndToEnd(t *testing.T) {
 			t.Errorf("secret was overwritten: on-disk = %q", onDisk)
 		}
 		if got := mustGit(t, other, "log", "-1", "--format=%s"); got != "written by a human" {
+			t.Errorf("an unexpected commit was pushed: %q", got)
+		}
+	})
+
+	t.Run("import adopts representable secrets and refuses the rest", func(t *testing.T) {
+		isolateGopass(t)
+		remoteURL, other := setupPlainStoreRemote(t)
+
+		// Secrets that pre-date any terraform state, exactly the scenario
+		// `terraform import` exists for (ADR 0002 directs users here; ADR
+		// 0003 defines what import may adopt). One commit seeds them all.
+		writeFile(t, other, "shared/imported.txt", "s3cr3t\n---\nzip: zap\n")
+		writeFile(t, other, "ops/rotated.txt", "hunter2\nRotated 2026-01-05 by ops\n")
+		writeFile(t, other, "db/typed.txt", "pw\n---\nflag: yes\nnested:\n  user: x\nratio: 1.10\n")
+		mustGit(t, other, "add", "--all")
+		mustGit(t, other, "commit", "--quiet", "-m", "written before import")
+		mustGit(t, other, "push", "--quiet", "origin", "main")
+
+		pp, err := configureProvider(t, map[string]interface{}{"repo_url": remoteURL})
+		if err != nil {
+			t.Fatalf("configure: %v", err)
+		}
+
+		res := passPasswordResource()
+		if res.Importer == nil {
+			t.Fatal("pass_password must register an Importer")
+		}
+		// Mimic Provider.ImportState: the importer receives a ResourceData
+		// carrying only the user-typed ID.
+		importSecret := func(id string) ([]*schema.ResourceData, error) {
+			rd := resourceData(t, map[string]interface{}{})
+			rd.SetId(id)
+
+			return res.Importer.StateContext(ctx, rd, pp)
+		}
+
+		// A password + flat string data secret imports, and the follow-up
+		// Read fills every attribute — path included: it is Required and
+		// ForceNew, so leaving it empty would force a replace on the next
+		// plan.
+		results, err := importSecret("shared/imported")
+		if err != nil {
+			t.Fatalf("import: %v", err)
+		}
+		if len(results) != 1 {
+			t.Fatalf("import returned %d states; want 1", len(results))
+		}
+		rd := results[0]
+		if diags := passPasswordResourceRead(ctx, rd, pp); diags.HasError() {
+			t.Fatalf("read after import: %v", diags)
+		}
+		if got := rd.Get("path").(string); got != "shared/imported" {
+			t.Errorf("path = %q; want shared/imported", got)
+		}
+		if got := rd.Get("password").(string); got != "s3cr3t" {
+			t.Errorf("password = %q", got)
+		}
+		if got := rd.Get("data").(map[string]interface{})["zip"]; got != "zap" {
+			t.Errorf("data.zip = %v", got)
+		}
+
+		refusals := []struct{ id, want string }{
+			// Content the resource cannot carry.
+			{"ops/rotated", "free-form text"},
+			{"db/typed", "flag, nested, ratio"},
+			// Non-canonical IDs gopass would silently normalize, leaving a
+			// state path that mismatches the config and forces a
+			// destructive replace.
+			{"/shared/imported", `did you mean "shared/imported"`},
+			{"shared/imported/", `did you mean "shared/imported"`},
+			{"shared/imported.gpg", `did you mean "shared/imported"`},
+			{"shared//imported", `did you mean "shared/imported"`},
+			// A wrong path must name the expected path shape, not just
+			// terraform core's generic import error.
+			{"no/such/secret", "no secret exists"},
+		}
+		for _, tc := range refusals {
+			if _, err := importSecret(tc.id); err == nil || !strings.Contains(err.Error(), tc.want) {
+				t.Errorf("import of %q: error = %v; want it to contain %q", tc.id, err, tc.want)
+			}
+		}
+
+		// Refused imports must leave the store untouched.
+		mustGit(t, other, "pull", "--quiet", "--rebase", "origin", "main")
+		if got := mustGit(t, other, "log", "-1", "--format=%s"); got != "written before import" {
 			t.Errorf("an unexpected commit was pushed: %q", got)
 		}
 	})

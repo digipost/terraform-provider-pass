@@ -164,6 +164,12 @@ The following attributes are exported:
 - `password` - Secret password
 - `data` - Additional secret data
 
+#### Import
+Existing secrets can be adopted with `terraform import <resource address> <path>`;
+the resource id is the secret's extension-less store path. Import refuses secrets
+whose content the resource cannot represent (free-form body text, nested or typed
+YAML values) — see `docs/adr/0003-import-refuses-unrepresentable-secrets.md`.
+
 
 ### The `pass_password` data source
 #### Argument Reference
