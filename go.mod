@@ -3,7 +3,7 @@ module github.com/digipost/terraform-provider-pass
 go 1.26.5
 
 require (
-	github.com/gofrs/flock v0.13.0
+	github.com/gofrs/flock v0.13.1
 	github.com/gopasspw/gopass v1.17.2
 	github.com/hashicorp/terraform-plugin-docs v0.25.0
 	github.com/hashicorp/terraform-plugin-log v0.10.0
