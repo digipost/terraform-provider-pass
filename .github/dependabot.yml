@@ -10,6 +10,8 @@ updates:
       interval: "weekly"
     groups:
       github-actions:
+        patterns:
+          - "*"
 
   # Maintain dependencies for Go modules
   - package-ecosystem: "gomod"
@@ -20,5 +22,9 @@ updates:
     groups:
       go-versions:
         applies-to: version-updates
+        patterns:
+          - "*"
       go-vulnerabilities:
         applies-to: security-updates
+        patterns:
+          - "*"
